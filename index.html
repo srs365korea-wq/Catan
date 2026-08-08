@@ -1,0 +1,1853 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🏝️ 카탄 온라인</title>
+
+<!-- ============================================================
+  Firebase (Realtime Database) - compat SDK
+  실행 전 아래 firebaseConfig 를 본인의 Firebase 프로젝트 설정으로 교체하세요.
+  Firebase 콘솔 > 프로젝트 설정 > 일반 > 내 앱 > SDK 설정 및 구성 에서 복사할 수 있습니다.
+  databaseURL 값이 반드시 있어야 합니다 (Realtime Database를 만들면 자동으로 생성됩니다).
+  Firebase 콘솔 > 빌드 > Realtime Database > 데이터베이스 만들기 (테스트 모드) 를 먼저 해두어야 합니다.
+============================================================= -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
+<style>
+  :root{
+    --bg:#141d33; --panel:#1b2740; --panel2:#1b2740; --cream:#fbf3dc; --cream2:#f0e3bc;
+    --gold:#ffd23f; --ink:#3a2f1d; --line:#e2c98a;
+    --wood:#4a9459; --brick:#d97a46; --wheat:#eec84f; --sheep:#a3d97e; --ore:#a7afba; --desert:#ecdcae;
+    --p1:#e0568a; --p2:#4a95e8; --p3:#3fc98a; --p4:#f0b34a;
+    --text:#f0ead8; --text-soft:#c7d0e6; --border:#f2c94c;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    background:radial-gradient(ellipse at top, #223256 0%, var(--bg) 75%);
+    color:var(--text); min-height:100vh; padding-bottom:24px;
+  }
+  h1,h2,h3{margin:0;}
+  .topbar{ text-align:center; padding:22px 10px 10px; }
+  .topbar h1{ font-size:26px; color:var(--gold); letter-spacing:1px; }
+  .topbar .sub{ color:var(--text-soft); font-size:13px; margin-top:4px; }
+
+  .costbar{
+    max-width:1400px; margin:14px auto; display:flex; gap:10px; flex-wrap:wrap; align-items:center;
+    background:var(--panel); border:1.5px solid var(--border); border-radius:12px; padding:10px 16px; justify-content:space-between;
+    box-shadow:0 2px 10px rgba(0,0,0,.25);
+  }
+  .costbar .costs{ display:flex; gap:10px; flex-wrap:wrap; }
+  .costchip{
+    background:#22304e; border:1px solid var(--border); border-radius:10px; padding:8px 16px 9px;
+    display:flex; flex-direction:column; align-items:center; gap:5px; min-width:118px;
+  }
+  .costchip .cc-label{ font-size:12px; color:var(--text-soft); font-weight:700; white-space:nowrap; }
+  .costchip .cc-icons{ font-size:19px; letter-spacing:3px; line-height:1; }
+  .topbtns{ display:flex; gap:8px; }
+  .btn{
+    cursor:pointer; border:none; border-radius:9px; padding:9px 14px; font-size:13px; font-weight:700;
+    background:#3a4f7a; color:#ffffff; transition:.15s; white-space:nowrap;
+  }
+  .btn:hover{ filter:brightness(1.15); }
+  .btn:disabled{ opacity:.35; cursor:not-allowed; }
+  .btn.gold{ background:linear-gradient(180deg,#ffe27a,#f2c94c); color:#3a2a06; }
+  .btn.blue{ background:linear-gradient(180deg,#6cb2f7,#3d84e0); color:#fff; }
+  .btn.red{ background:linear-gradient(180deg,#f58080,#d94a4a); color:#fff; }
+  .btn.green{ background:linear-gradient(180deg,#7fdba0,#39ab68); color:#04240f; }
+  .btn.small{ padding:6px 10px; font-size:12px; }
+
+  .layout{ max-width:1400px; margin:0 auto; display:grid; grid-template-columns:280px 1fr 280px; gap:14px; padding:0 14px; }
+  @media(max-width:1100px){ .layout{ grid-template-columns:1fr; } }
+
+  .side{ display:flex; flex-direction:column; gap:14px; }
+  .player-card{
+    border-radius:12px; overflow:hidden; border:1.5px solid var(--border); background:var(--panel);
+    box-shadow:0 2px 10px rgba(0,0,0,.25);
+  }
+  .player-card .head{ padding:10px 14px; display:flex; justify-content:space-between; align-items:center; font-weight:800; color:#fff; }
+  .player-card .head .pts{ background:rgba(0,0,0,.28); border-radius:20px; padding:3px 10px; font-size:13px;}
+  .player-card .body{ padding:12px 14px; }
+  .player-card.active{ box-shadow:0 0 0 2px var(--gold), 0 0 18px rgba(255,210,63,.45); }
+  .reslabel{ font-size:11px; color:var(--text-soft); margin-bottom:4px; }
+  .resrow{ display:grid; grid-template-columns:repeat(5,1fr); gap:4px; margin-bottom:10px; }
+  .rescell{ background:#22304e; border-radius:6px; text-align:center; padding:5px 2px; font-size:13px; color:var(--text); }
+  .rescell .n{ display:block; font-weight:800; margin-top:2px; }
+  .devinfo{ background:#22304e; border-radius:6px; padding:6px 8px; font-size:12px; margin-bottom:8px; color:var(--text-soft);}
+  .statrow{ display:flex; gap:6px; }
+  .statchip{ background:#22304e; border-radius:6px; padding:5px 8px; font-size:11px; flex:1; text-align:center; color:var(--text-soft);}
+  .statchip b{ display:block; color:var(--gold); font-size:14px;}
+  .whoami-btn{ margin-top:8px; width:100%; }
+
+  .boardwrap{
+    border:1.5px solid var(--border); border-radius:16px; background:var(--panel); padding:14px;
+    display:flex; align-items:center; justify-content:center; min-height:520px;
+    box-shadow:0 2px 14px rgba(0,0,0,.3);
+  }
+
+  .roominfo{ font-size:12px; color:var(--text-soft); text-align:center; margin-top:6px;}
+  .roominfo b{ color:var(--gold); letter-spacing:2px; }
+
+  .actionbar{
+    max-width:1400px; margin:14px auto 0; display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+    background:var(--panel); border:1.5px solid var(--border); border-radius:12px; padding:12px 16px;
+    box-shadow:0 2px 10px rgba(0,0,0,.25);
+  }
+  .turnpill{ background:var(--p1); color:#fff; font-weight:800; padding:8px 14px; border-radius:20px; font-size:13px; }
+  .dice-box{ display:flex; gap:6px; align-items:center; }
+  .die{ width:34px; height:34px; background:#fff; color:#222; border:1px solid var(--border); border-radius:7px; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:16px; }
+  .actionbar .spacer{ flex:1; }
+  .log{
+    max-width:1400px; margin:12px auto 0; background:var(--panel); border:1.5px solid var(--border); border-radius:12px;
+    padding:12px 16px; font-size:13px; color:var(--text-soft); max-height:150px; overflow-y:auto;
+  }
+  .log div{ padding:2px 0; border-bottom:1px dashed #2c3c5e; }
+  .footnote{ text-align:center; font-size:11px; color:#8092ab; margin-top:14px; }
+
+  /* modal */
+  .overlay{ position:fixed; inset:0; background:rgba(5,10,20,.72); display:flex; align-items:center; justify-content:center; z-index:100; padding:16px; }
+  .modal{ background:var(--cream); color:var(--ink); border:3px solid var(--gold); border-radius:16px; padding:26px 28px; max-width:640px; width:100%; max-height:88vh; overflow-y:auto; }
+  .modal h2{ font-size:20px; margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+  .modal p{ font-size:14px; line-height:1.6; }
+  .modal .close-x{ float:right; background:none; border:none; font-size:18px; cursor:pointer; color:var(--ink);}
+  .optrow{ display:flex; gap:8px; flex-wrap:wrap; margin:12px 0; }
+  .opt{ background:#efe0ae; border:1px solid var(--line); padding:8px 16px; border-radius:8px; cursor:pointer; font-weight:700; }
+  .opt.sel{ background:var(--gold); }
+  .field{ width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--line); margin-bottom:10px; font-size:14px; background:#fffaf0; }
+  .stepline{ display:flex; align-items:center; justify-content:space-between; background:#fffaf0; border:1px solid var(--line); border-radius:8px; padding:8px 12px; margin-bottom:8px; }
+  .stepbtn{ width:30px; height:30px; border-radius:6px; border:none; background:var(--gold); font-weight:900; cursor:pointer; font-size:15px; }
+  .rulesbox h3{ color:#6b4c14; margin:14px 0 6px; font-size:15px; }
+  .rulesbox ul{ margin:4px 0 8px 18px; padding:0; font-size:13.5px; line-height:1.65;}
+  .rulesbox .chips{ display:flex; gap:8px; flex-wrap:wrap; margin:8px 0; }
+  .rulesbox .chip{ background:#efe0ae; border:1px solid var(--line); border-radius:8px; padding:6px 10px; font-size:12.5px; }
+  .playerpicker{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:12px 0;}
+  .ppick{ border:2px solid var(--line); border-radius:10px; padding:12px; cursor:pointer; font-weight:800; text-align:center; color:#fff; }
+  .ppick.taken{ opacity:.45; cursor:not-allowed; }
+  .small-note{ font-size:12px; color:#7a6636; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>🏝️ 카탄 온라인</h1>
+  <div class="sub" id="subtitle">최대 4인 · 방 코드로 서로 다른 기기에서 함께 플레이</div>
+  <div class="roominfo" id="roomInfo"></div>
+</div>
+
+<div class="costbar">
+  <div class="costs" id="costChips"></div>
+  <div class="topbtns">
+    <button class="btn" onclick="openRules()">📜 규칙 확인</button>
+    <button class="btn" onclick="confirmNewGame()">🔄 새 게임</button>
+  </div>
+</div>
+
+<div class="layout">
+  <div class="side" id="sideLeft"></div>
+  <div class="boardwrap"><svg id="boardSvg" width="620" height="560" viewBox="-310 -280 620 560"></svg></div>
+  <div class="side" id="sideRight"></div>
+</div>
+
+<div class="actionbar" id="actionBar"></div>
+<div class="log" id="logBox"></div>
+<div class="footnote">도로/마을/도시 비용 및 도둑 규칙은 상단 "📜 규칙 확인" 버튼에서 언제든 다시 볼 수 있습니다. · 온라인 방은 코드로 참가하며, 각자 브라우저를 새로고침해도 자동으로 다시 접속됩니다.</div>
+
+<div id="modalRoot"></div>
+
+<script>
+/* =========================================================================
+   0. FIREBASE 설정 — 반드시 본인 프로젝트 값으로 교체하세요.
+========================================================================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyBlyZjL0fT91-8z9LTxp5zxLD_wWMNyufs",
+  authDomain: "project-catangu.firebaseapp.com",
+  databaseURL: "https://project-catangu-default-rtdb.firebaseio.com",
+  projectId: "project-catangu",
+  storageBucket: "project-catangu.firebasestorage.app",
+  messagingSenderId: "155906806051",
+  appId: "1:155906806051:web:81968ad3f4e81365adfc96",
+  measurementId: "G-RKVQD18RNC"
+};
+let fbReady = false;
+let fbInitError = null;
+let db = null;
+try{
+  if(firebaseConfig.apiKey !== "REPLACE_ME"){
+    if(!firebaseConfig.databaseURL){
+      fbInitError = "firebaseConfig에 databaseURL이 없습니다. Realtime Database를 쓰려면 databaseURL 값이 꼭 필요합니다.";
+    } else {
+      firebase.initializeApp(firebaseConfig);
+      db = firebase.database();
+      fbReady = true;
+    }
+  } else {
+    fbInitError = "firebaseConfig 값이 채워지지 않았습니다.";
+  }
+}catch(e){
+  console.error("Firebase 초기화 실패:", e);
+  fbInitError = (e && e.message) ? e.message : String(e);
+}
+
+/* =========================================================================
+   1. 상수
+========================================================================= */
+const RES = ["wood","brick","wheat","sheep","ore"];
+const RES_LABEL = {wood:"나무", brick:"벽돌", wheat:"밀", sheep:"양", ore:"철"};
+const RES_ICON  = {wood:"🌲", brick:"🧱", wheat:"🌾", sheep:"🐑", ore:"⛏️"};
+const RES_COLOR = {wood:"var(--wood)", brick:"var(--brick)", wheat:"var(--wheat)", sheep:"var(--sheep)", ore:"var(--ore)", desert:"var(--desert)"};
+const PLAYER_COLORS = ["#d84f7c","#3f8ce0","#3fbf7f","#e0a63f"];
+const PLAYER_COLOR_NAME = ["핑크","블루","그린","옐로우"];
+const HEX_SIZE = 52;
+const BUILD_COST = { road:{wood:1,brick:1}, settlement:{wood:1,brick:1,wheat:1,sheep:1}, city:{wheat:2,ore:3}, dev:{wheat:1,sheep:1,ore:1} };
+
+/* =========================================================================
+   2. 보드 지오메트리 (육각형 좌표 / 정점 / 변 생성)
+========================================================================= */
+function buildBoardGeometry(){
+  const rows = [3,4,5,4,3];
+  const hexW = Math.sqrt(3)*HEX_SIZE;
+  const hexH = 2*HEX_SIZE;
+  const tiles = [];
+  rows.forEach((count,rowIdx)=>{
+    const y = (rowIdx-2)*hexH*0.75;
+    for(let i=0;i<count;i++){
+      const x = (i-(count-1)/2)*hexW;
+      tiles.push({cx:x, cy:y, resource:null, number:null});
+    }
+  });
+
+  function corner(cx,cy,i){
+    const ang = Math.PI/180*(60*i-30);
+    return { x: cx + HEX_SIZE*Math.cos(ang), y: cy + HEX_SIZE*Math.sin(ang) };
+  }
+  const vKey = (x,y)=> Math.round(x*4)+","+Math.round(y*4);
+  const vertMap = new Map();
+  const vertices = [];
+  const edgeMap = new Map();
+  const edges = [];
+
+  tiles.forEach((t, tIdx)=>{
+    const cIds = [];
+    for(let i=0;i<6;i++){
+      const c = corner(t.cx,t.cy,i);
+      const key = vKey(c.x,c.y);
+      let vid = vertMap.get(key);
+      if(vid===undefined){
+        vid = vertices.length;
+        vertMap.set(key, vid);
+        vertices.push({id:vid, x:c.x, y:c.y, tiles:[], building:null, port:null});
+      }
+      vertices[vid].tiles.push(tIdx);
+      cIds.push(vid);
+    }
+    t.vertexIds = cIds;
+    for(let i=0;i<6;i++){
+      const a = cIds[i], b = cIds[(i+1)%6];
+      const ekey = a<b ? a+"_"+b : b+"_"+a;
+      let eid = edgeMap.get(ekey);
+      if(eid===undefined){
+        eid = edges.length;
+        edgeMap.set(ekey, eid);
+        edges.push({id:eid, v1:Math.min(a,b), v2:Math.max(a,b), tiles:[], road:null});
+      }
+      edges[eid].tiles.push(tIdx);
+    }
+  });
+
+  // 항구 배치: 바깥 둘레(edge.tiles.length===1) 를 각도순 정렬 후 균등 배치
+  const perimeter = edges.filter(e=>e.tiles.length===1).map(e=>{
+    const mx = (vertices[e.v1].x+vertices[e.v2].x)/2;
+    const my = (vertices[e.v1].y+vertices[e.v2].y)/2;
+    return {e, ang: Math.atan2(my,mx), mx, my};
+  }).sort((a,b)=>a.ang-b.ang);
+
+  const portTypes = ["3:1","sheep","3:1","wheat","ore","3:1","wood","brick","3:1"];
+  const step = Math.floor(perimeter.length/portTypes.length);
+  for(let i=0;i<portTypes.length;i++){
+    const p = perimeter[(i*step)%perimeter.length];
+    const type = portTypes[i];
+    const portInfo = type==="3:1" ? {ratio:3, resource:null} : {ratio:2, resource:type};
+    vertices[p.e.v1].port = portInfo;
+    vertices[p.e.v2].port = portInfo;
+  }
+
+  return { tiles, vertices, edges };
+}
+
+function assignResourcesAndNumbers(board){
+  const resPool = [];
+  ["wood","wood","wood","wood","brick","brick","brick","wheat","wheat","wheat","wheat","sheep","sheep","sheep","sheep","ore","ore","ore"].forEach(r=>resPool.push(r));
+  shuffle(resPool);
+  const numPool = [2,3,3,4,4,5,5,6,6,8,8,9,9,10,10,11,11,12];
+  shuffle(numPool);
+  // 사막(빈칸)은 항상 보드 정중앙 타일에 고정
+  let desertIdx = board.tiles.findIndex(t=>Math.abs(t.cx)<0.01 && Math.abs(t.cy)<0.01);
+  if(desertIdx===-1) desertIdx = Math.floor(board.tiles.length/2);
+  let ri=0, ni=0;
+  board.tiles.forEach((t,idx)=>{
+    if(idx===desertIdx){ t.resource="desert"; t.number=null; }
+    else{ t.resource=resPool[ri++]; t.number=numPool[ni++]; }
+  });
+  return desertIdx;
+}
+function shuffle(arr){ for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; }
+
+/* =========================================================================
+   3. 상태 생성
+========================================================================= */
+function makeDevDeck(){
+  const deck = [];
+  for(let i=0;i<14;i++) deck.push("knight");
+  for(let i=0;i<5;i++) deck.push("vp");
+  return shuffle(deck);
+}
+
+// 대기실(로비)에서 호스트가 "게임 시작"을 누르면 호출됨.
+// 참가하지 않은 빈 자리는 제거하고, 실제 참가한 인원만으로 보드를 만들어 셋업 단계로 진입한다.
+function startGameFromLobby(state){
+  const active = state.players.filter(p=>p.claimedBy);
+  if(active.length<2) return false;
+  active.forEach((p,i)=>{
+    p.idx = i; p.color = PLAYER_COLORS[i];
+    p.resources = {wood:0,brick:0,wheat:0,sheep:0,ore:0};
+    p.devCards = []; p.knightsPlayed = 0; p.roads=[]; p.settlements=[]; p.cities=[]; p.points=0;
+  });
+  state.players = active;
+
+  const board = buildBoardGeometry();
+  const robberTileIdx = assignResourcesAndNumbers(board);
+  state.board = board;
+  state.robberTileIdx = robberTileIdx;
+  state.robberPlacedBy = null;
+  state.currentPlayerIndex = 0;
+  state.turnNumber = 1;
+  state.phase = "setup";
+  state.setupState = { order: buildSnakeOrder(state.players.length), pointer:0, awaiting:"settlement", lastVertex:null };
+  state.subPhase = "idle";
+  state.discardQueue = []; state.discardNeed = {};
+  state.dice1 = 0; state.dice2 = 0; state.hasRolledThisTurn = false;
+  state.devDeck = makeDevDeck(); state.devPlayedThisTurn = false;
+  state.pendingTrade = null; state.longestRoadOwner = null; state.largestArmyOwner = null; state.winner = null;
+  pushLog(state, `🎉 게임 시작! 각자 정착지와 도로를 순서대로 직접 배치합니다.`);
+  pushLog(state, `${state.players[state.setupState.order[0]].name}님, 정착지를 놓을 위치를 보드에서 클릭하세요.`);
+  return true;
+}
+
+function createInitialState(names, mode, roomCode){
+  const board = buildBoardGeometry();
+  const robberTileIdx = assignResourcesAndNumbers(board);
+  const players = names.map((name,i)=>({
+    idx:i, name, color:PLAYER_COLORS[i],
+    resources:{wood:0,brick:0,wheat:0,sheep:0,ore:0},
+    devCards: [], // {id, type, boughtTurn, played}
+    knightsPlayed:0,
+    roads:[], settlements:[], cities:[],
+    points:0, claimedBy:null
+  }));
+
+  const state = {
+    mode, roomCode: roomCode||null,
+    board, players,
+    robberTileIdx,
+    robberPlacedBy: null, // 도둑을 마지막으로 옮긴 플레이어 idx (하우스룰: 그 타일 자원은 이 사람에게 감)
+    currentPlayerIndex: 0,
+    turnNumber:1,
+    phase:"setup", // setup -> playing -> ended
+    setupState: { order: buildSnakeOrder(players.length), pointer:0, awaiting:"settlement", lastVertex:null },
+    subPhase:"idle", // idle, awaitDiscard, awaitRobberMove, awaitSteal, tradeResponse
+    discardQueue: [],
+    discardNeed: {},
+    dice1: 0, dice2: 0,
+    hasRolledThisTurn:false,
+    devDeck: makeDevDeck(),
+    devPlayedThisTurn:false,
+    pendingTrade:null,
+    longestRoadOwner:null,
+    largestArmyOwner:null,
+    winner:null,
+    log:[],
+    updatedAt: Date.now()
+  };
+
+  pushLog(state, `🎉 게임 시작! 각자 정착지와 도로를 순서대로 직접 배치합니다.`);
+  pushLog(state, `${players[state.setupState.order[0]].name}님, 정착지를 놓을 위치를 보드에서 클릭하세요.`);
+  return state;
+}
+
+// 초기 배치 순서: 1→2→...→N→N→...→2→1 (스네이크 드래프트, 각 단계마다 정착지1개+도로1개)
+function buildSnakeOrder(n){
+  const fwd = Array.from({length:n}, (_,i)=>i);
+  const bwd = fwd.slice().reverse();
+  return fwd.concat(bwd);
+}
+
+function canPlaceSetupSettlement(state, vertexId){
+  const v = state.board.vertices[vertexId];
+  if(v.building) return false;
+  const neigh = neighborsOfVertex(state.board, vertexId);
+  for(const nv of neigh){ if(state.board.vertices[nv].building) return false; }
+  return true;
+}
+function canPlaceSetupRoad(state, edgeId, atVertexId){
+  const e = state.board.edges[edgeId];
+  if(e.road!=null) return false;
+  return e.v1===atVertexId || e.v2===atVertexId;
+}
+function currentSetupPlayerIdx(state){
+  return state.setupState.order[state.setupState.pointer];
+}
+function placeSetupSettlement(state, playerIdx, vertexId){
+  if(playerIdx!==currentSetupPlayerIdx(state)) return false;
+  if(!canPlaceSetupSettlement(state, vertexId)) return false;
+  const p = state.players[playerIdx];
+  state.board.vertices[vertexId].building = {playerIdx, type:"settlement"};
+  p.settlements.push(vertexId);
+  p.points += 1;
+  state.setupState.awaiting = "road";
+  state.setupState.lastVertex = vertexId;
+  pushLog(state, `🏠 ${p.name}이(가) 정착지를 놓았습니다. 이제 연결할 도로를 선택하세요.`);
+  return true;
+}
+function placeSetupRoad(state, playerIdx, edgeId){
+  if(playerIdx!==currentSetupPlayerIdx(state)) return false;
+  const vid = state.setupState.lastVertex;
+  if(!canPlaceSetupRoad(state, edgeId, vid)) return false;
+  const p = state.players[playerIdx];
+  state.board.edges[edgeId].road = playerIdx;
+  p.roads.push(edgeId);
+  pushLog(state, `🛣️ ${p.name}이(가) 도로를 놓았습니다.`);
+
+  const isSecondRound = state.setupState.pointer >= state.players.length;
+  if(isSecondRound){
+    state.board.vertices[vid].tiles.forEach(tIdx=>{
+      const t = state.board.tiles[tIdx];
+      if(t.resource!=="desert") p.resources[t.resource]++;
+    });
+    pushLog(state, `📦 ${p.name}이(가) 두번째 정착지 주변 자원을 받았습니다.`);
+  }
+
+  state.setupState.pointer += 1;
+  state.setupState.lastVertex = null;
+  if(state.setupState.pointer >= state.setupState.order.length){
+    state.phase = "playing";
+    state.subPhase = "idle";
+    state.currentPlayerIndex = state.setupState.order[0];
+    state.hasRolledThisTurn = false;
+    pushLog(state, `🎉 초기 배치 완료! ${state.players[state.currentPlayerIndex].name}님부터 시작합니다. 주사위를 굴려주세요.`);
+  } else {
+    state.setupState.awaiting = "settlement";
+    pushLog(state, `${state.players[currentSetupPlayerIdx(state)].name}님, 정착지를 놓을 위치를 클릭하세요.`);
+  }
+  return true;
+}
+
+function neighborsOfVertex(board, vid){
+  const res = new Set();
+  board.edges.forEach(e=>{
+    if(e.v1===vid) res.add(e.v2);
+    if(e.v2===vid) res.add(e.v1);
+  });
+  return [...res];
+}
+function edgesOfVertex(board, vid){
+  return board.edges.filter(e=>e.v1===vid || e.v2===vid);
+}
+
+/* =========================================================================
+   4. 게임 로직
+========================================================================= */
+function pushLog(state, text){
+  state.log.push(text);
+  if(state.log.length>60) state.log.shift();
+}
+
+function totalCards(player){ return RES.reduce((s,r)=>s+player.resources[r],0); }
+
+function rollDice(state){
+  const d1 = 1+Math.floor(Math.random()*6), d2 = 1+Math.floor(Math.random()*6);
+  state.dice1=d1; state.dice2=d2;
+  state.hasRolledThisTurn = true;
+  const sum = d1+d2;
+  const cur = state.players[state.currentPlayerIndex];
+  pushLog(state, `🎲 ${cur.name}의 주사위: ${d1}+${d2} = ${sum}`);
+
+  if(sum===7){
+    // 카드 8장 이상 보유자는 절반 버려야 함
+    state.discardQueue = [];
+    state.discardNeed = {};
+    state.players.forEach(p=>{
+      const tot = totalCards(p);
+      if(tot>7){
+        state.discardQueue.push(p.idx);
+        state.discardNeed[p.idx] = Math.floor(tot/2);
+      }
+    });
+    if(state.discardQueue.length>0){
+      state.subPhase="awaitDiscard";
+      pushLog(state, `☠️ 도둑 발동! 8장 이상 보유자는 카드를 절반 버려야 합니다.`);
+    } else {
+      state.subPhase="awaitRobberMove";
+      pushLog(state, `☠️ 도둑 발동! ${cur.name}님, 도둑을 이동할 타일을 클릭하세요.`);
+    }
+    return;
+  }
+  distributeResources(state, sum);
+}
+
+function distributeResources(state, sum){
+  state.board.tiles.forEach((t, tIdx)=>{
+    if(t.number!==sum) return;
+    if(tIdx===state.robberTileIdx){
+      // 하우스룰: 도둑이 있는 타일 자원은 사라지지 않고, 도둑을 마지막으로 옮긴 사람에게 통째로 간다.
+      if(state.robberPlacedBy!=null){
+        let totalAmount = 0;
+        state.board.vertices.forEach(v=>{
+          if(!v.building) return;
+          if(!v.tiles.includes(tIdx)) return;
+          totalAmount += v.building.type==="city" ? 2 : 1;
+        });
+        if(totalAmount>0){
+          const placer = state.players[state.robberPlacedBy];
+          placer.resources[t.resource] += totalAmount;
+          pushLog(state, `🕵️ 도둑이 있는 타일의 자원 ${RES_ICON[t.resource]}${totalAmount}개가 ${placer.name}에게 돌아갔습니다.`);
+        }
+      }
+      return;
+    }
+    state.board.vertices.forEach(v=>{
+      if(!v.building) return;
+      if(!v.tiles.includes(tIdx)) return;
+      const amount = v.building.type==="city" ? 2 : 1;
+      const p = state.players[v.building.playerIdx];
+      p.resources[t.resource]+=amount;
+    });
+  });
+  pushLog(state, `📦 자원이 분배되었습니다.`);
+}
+
+// ---- 도둑 이동 + 훔치기 (버그 수정 지점) --------------------------------
+function moveRobber(state, tileIdx){
+  if(tileIdx===state.robberTileIdx){ return; } // 같은 타일로는 이동 불가
+  state.robberTileIdx = tileIdx;
+  const cur = state.players[state.currentPlayerIndex];
+  state.robberPlacedBy = cur.idx; // 하우스룰: 이후 이 타일에서 나는 자원은 이 사람이 받는다
+  pushLog(state, `🕵️ ${cur.name}이(가) 도둑을 이동시켰습니다.`);
+
+  // 해당 타일에 건물을 보유한 "다른" 플레이어 중, 카드가 1장 이상 있는 사람만 대상
+  const victims = new Set();
+  state.board.vertices.forEach(v=>{
+    if(!v.building) return;
+    if(!v.tiles.includes(tileIdx)) return;
+    if(v.building.playerIdx===cur.idx) return;
+    if(totalCards(state.players[v.building.playerIdx])>0) victims.add(v.building.playerIdx);
+  });
+
+  if(victims.size===0){
+    state.subPhase="idle";
+    pushLog(state, `훔칠 수 있는 대상이 없습니다.`);
+    return;
+  }
+  if(victims.size===1){
+    const victimIdx = [...victims][0];
+    stealResourceFromPlayer(state, victimIdx, cur.idx);
+    state.subPhase="idle";
+    return;
+  }
+  state.pendingSteal = {victims:[...victims]};
+  state.subPhase="awaitSteal";
+}
+
+// 실제 자원 이전: 보유한 자원 "장수" 만큼 가중치를 둔 풀(pool)에서 무작위로 한 장을 뽑아
+// 정확히 그 자원 종류의 카드 1장을 상대→나 로 이전한다. (이전 버전은 카드 수량을 반영하지 않거나
+// 상태 반영이 누락되어 훔치기가 동작하지 않는 버그가 있었음 — 아래처럼 명시적으로 수량을 차감/증가시키고
+// 매 액션 후 반드시 persist() 하도록 고쳤음)
+function stealResourceFromPlayer(state, victimIdx, thiefIdx){
+  const victim = state.players[victimIdx];
+  const thief = state.players[thiefIdx];
+  const pool = [];
+  RES.forEach(r=>{ for(let k=0;k<victim.resources[r];k++) pool.push(r); });
+  if(pool.length===0){
+    pushLog(state, `${victim.name}에게 훔칠 자원이 없습니다.`);
+    return;
+  }
+  const picked = pool[Math.floor(Math.random()*pool.length)];
+  victim.resources[picked] -= 1;
+  thief.resources[picked] += 1;
+  pushLog(state, `🖐️ ${thief.name}이(가) ${victim.name}의 자원 1장(${RES_ICON[picked]}${RES_LABEL[picked]})을 훔쳤습니다.`);
+}
+
+function doDiscard(state, playerIdx, chosen){
+  // chosen = {wood:n,brick:n,...} 합계가 discardNeed[playerIdx] 와 같아야 함
+  const need = state.discardNeed[playerIdx]||0;
+  const sum = RES.reduce((s,r)=>s+(chosen[r]||0),0);
+  if(sum!==need) return false;
+  const p = state.players[playerIdx];
+  for(const r of RES){ if((chosen[r]||0) > p.resources[r]) return false; }
+  RES.forEach(r=>{ p.resources[r]-= (chosen[r]||0); });
+  pushLog(state, `🗑️ ${p.name}이(가) 카드 ${need}장을 버렸습니다.`);
+  state.discardQueue = state.discardQueue.filter(i=>i!==playerIdx);
+  if(state.discardQueue.length===0){
+    state.subPhase="awaitRobberMove";
+    pushLog(state, `☠️ ${state.players[state.currentPlayerIndex].name}님, 도둑을 이동할 타일을 클릭하세요.`);
+  }
+  return true;
+}
+
+function canBuildRoad(state, playerIdx, edgeId){
+  const e = state.board.edges[edgeId];
+  if(e.road!=null) return false;
+  const v1 = state.board.vertices[e.v1], v2 = state.board.vertices[e.v2];
+  if(v1.building && v1.building.playerIdx===playerIdx) return true;
+  if(v2.building && v2.building.playerIdx===playerIdx) return true;
+  const myEdgesAtV1 = edgesOfVertex(state.board, e.v1).some(ee=>ee.road===playerIdx);
+  const myEdgesAtV2 = edgesOfVertex(state.board, e.v2).some(ee=>ee.road===playerIdx);
+  if(myEdgesAtV1 && (!v1.building || v1.building.playerIdx===playerIdx)) return true;
+  if(myEdgesAtV2 && (!v2.building || v2.building.playerIdx===playerIdx)) return true;
+  return false;
+}
+
+function canBuildSettlement(state, playerIdx, vertexId){
+  const v = state.board.vertices[vertexId];
+  if(v.building) return false;
+  const neigh = neighborsOfVertex(state.board, vertexId);
+  for(const nv of neigh){ if(state.board.vertices[nv].building) return false; }
+  const connected = edgesOfVertex(state.board, vertexId).some(e=>e.road===playerIdx);
+  return connected;
+}
+
+function hasResources(player, cost){
+  return Object.keys(cost).every(r=>player.resources[r] >= cost[r]);
+}
+function payResources(player, cost){
+  Object.keys(cost).forEach(r=> player.resources[r]-=cost[r]);
+}
+
+function buildRoad(state, playerIdx, edgeId){
+  const p = state.players[playerIdx];
+  if(!hasResources(p, BUILD_COST.road)) return false;
+  if(!canBuildRoad(state, playerIdx, edgeId)) return false;
+  payResources(p, BUILD_COST.road);
+  state.board.edges[edgeId].road = playerIdx;
+  p.roads.push(edgeId);
+  pushLog(state, `🛣️ ${p.name}이(가) 도로를 건설했습니다.`);
+  recomputeLongestRoad(state);
+  checkWin(state);
+  return true;
+}
+function buildSettlement(state, playerIdx, vertexId){
+  const p = state.players[playerIdx];
+  if(!hasResources(p, BUILD_COST.settlement)) return false;
+  if(!canBuildSettlement(state, playerIdx, vertexId)) return false;
+  payResources(p, BUILD_COST.settlement);
+  state.board.vertices[vertexId].building = {playerIdx, type:"settlement"};
+  p.settlements.push(vertexId);
+  p.points += 1;
+  pushLog(state, `🏠 ${p.name}이(가) 마을을 건설했습니다.`);
+  recomputeLongestRoad(state);
+  checkWin(state);
+  return true;
+}
+function buildCity(state, playerIdx, vertexId){
+  const p = state.players[playerIdx];
+  const v = state.board.vertices[vertexId];
+  if(!v.building || v.building.playerIdx!==playerIdx || v.building.type!=="settlement") return false;
+  if(!hasResources(p, BUILD_COST.city)) return false;
+  payResources(p, BUILD_COST.city);
+  v.building.type="city";
+  p.settlements = p.settlements.filter(id=>id!==vertexId);
+  p.cities.push(vertexId);
+  p.points += 1;
+  pushLog(state, `🏛️ ${p.name}이(가) 도시로 업그레이드했습니다.`);
+  checkWin(state);
+  return true;
+}
+function buyDevCard(state, playerIdx){
+  const p = state.players[playerIdx];
+  if(!hasResources(p, BUILD_COST.dev)) return false;
+  if(state.devDeck.length===0) return false;
+  payResources(p, BUILD_COST.dev);
+  const type = state.devDeck.pop();
+  p.devCards.push({id: Date.now()+"_"+Math.random().toString(36).slice(2,6), type, boughtTurn: state.turnNumber, played:false});
+  if(type==="vp") p.points += 1;
+  pushLog(state, `🃏 ${p.name}이(가) 발전카드를 구매했습니다.`);
+  checkWin(state);
+  return true;
+}
+function playKnight(state, playerIdx, cardId){
+  const p = state.players[playerIdx];
+  const card = p.devCards.find(c=>c.id===cardId && c.type==="knight" && !c.played);
+  if(!card) return false;
+  if(card.boughtTurn===state.turnNumber) return false; // 구매한 턴엔 사용 불가
+  card.played = true;
+  p.knightsPlayed += 1;
+  pushLog(state, `⚔️ ${p.name}이(가) 기사 카드를 사용했습니다.`);
+  recomputeLargestArmy(state);
+  state.subPhase="awaitRobberMove";
+  checkWin(state);
+  return true;
+}
+
+function recomputeLongestRoad(state){
+  let best=-1, bestLen=4; // 5 이상만 인정
+  state.players.forEach(p=>{
+    const len = longestRoadLength(state, p.idx);
+    p._roadLen = len;
+    if(len>bestLen){ bestLen=len; best=p.idx; }
+  });
+  if(best===-1){
+    if(state.longestRoadOwner!=null){
+      state.players[state.longestRoadOwner].points -= 2;
+      state.longestRoadOwner = null;
+    }
+    return;
+  }
+  if(state.longestRoadOwner!==best){
+    if(state.longestRoadOwner!=null) state.players[state.longestRoadOwner].points -= 2;
+    // 동률이면 기존 보유자가 유지 (엄격히 초과할 때만 교체)
+    if(state.longestRoadOwner==null || bestLen > (state.players[state.longestRoadOwner]?._roadLen||0)){
+      state.longestRoadOwner = best;
+      state.players[best].points += 2;
+      pushLog(state, `🏆 ${state.players[best].name}이(가) 최장교역로(2점)를 획득했습니다!`);
+    } else {
+      state.players[state.longestRoadOwner].points += 2;
+    }
+  }
+}
+function longestRoadLength(state, playerIdx){
+  const myEdges = state.board.edges.filter(e=>e.road===playerIdx);
+  if(myEdges.length===0) return 0;
+  const adj = {};
+  myEdges.forEach(e=>{
+    (adj[e.v1]=adj[e.v1]||[]).push({to:e.v2, eid:e.id});
+    (adj[e.v2]=adj[e.v2]||[]).push({to:e.v1, eid:e.id});
+  });
+  let best = 0;
+  function dfs(v, visitedEdges, len){
+    best = Math.max(best, len);
+    const neighs = adj[v]||[];
+    for(const nb of neighs){
+      if(visitedEdges.has(nb.eid)) continue;
+      const targetVertex = state.board.vertices[nb.to];
+      if(targetVertex.building && targetVertex.building.playerIdx!==playerIdx){
+        // 상대 건물이면 여기까지만 세고 더 진행 불가
+        visitedEdges.add(nb.eid);
+        best = Math.max(best, len+1);
+        visitedEdges.delete(nb.eid);
+        continue;
+      }
+      visitedEdges.add(nb.eid);
+      dfs(nb.to, visitedEdges, len+1);
+      visitedEdges.delete(nb.eid);
+    }
+  }
+  Object.keys(adj).forEach(v=> dfs(Number(v), new Set(), 0));
+  return best;
+}
+function recomputeLargestArmy(state){
+  let best=-1, bestCount=2;
+  state.players.forEach(p=>{ if(p.knightsPlayed>bestCount){ bestCount=p.knightsPlayed; best=p.idx; } });
+  if(best===-1) return;
+  if(state.largestArmyOwner!==best){
+    if(state.largestArmyOwner!=null) state.players[state.largestArmyOwner].points -= 2;
+    state.largestArmyOwner = best;
+    state.players[best].points += 2;
+    pushLog(state, `🛡️ ${state.players[best].name}이(가) 최강기사단(2점)을 획득했습니다!`);
+  }
+}
+function checkWin(state){
+  const w = state.players.find(p=>p.points>=10);
+  if(w){ state.winner = w.idx; state.phase="ended"; pushLog(state, `🎊🎊 ${w.name} 승리! (10점 달성) 🎊🎊`); }
+}
+
+function endTurn(state){
+  state.currentPlayerIndex = (state.currentPlayerIndex+1)%state.players.length;
+  state.turnNumber += 1;
+  state.hasRolledThisTurn=false;
+  state.devPlayedThisTurn=false;
+  state.pendingTrade=null;
+  pushLog(state, `➡️ ${state.players[state.currentPlayerIndex].name}의 차례입니다.`);
+}
+
+/* ---- 은행/항구 교역 ---- */
+function bestRatioFor(state, playerIdx, resource){
+  let ratio=4;
+  const p = state.players[playerIdx];
+  [...p.settlements, ...p.cities].forEach(vid=>{
+    const port = state.board.vertices[vid].port;
+    if(!port) return;
+    if(port.resource==null) ratio = Math.min(ratio, port.ratio);
+    else if(port.resource===resource) ratio = Math.min(ratio, port.ratio);
+  });
+  return ratio;
+}
+function bankTrade(state, playerIdx, giveRes, getRes){
+  const p = state.players[playerIdx];
+  const ratio = bestRatioFor(state, playerIdx, giveRes);
+  if(p.resources[giveRes] < ratio) return false;
+  p.resources[giveRes] -= ratio;
+  p.resources[getRes] += 1;
+  pushLog(state, `🏦 ${p.name}이(가) 은행과 교역했습니다. (${RES_ICON[giveRes]}${ratio} → ${RES_ICON[getRes]}1)`);
+  return true;
+}
+
+/* ---- 플레이어간 거래 ---- */
+function proposeTrade(state, fromIdx, toIdx, offer){
+  state.pendingTrade = { fromIdx, toIdx, offer, status:"proposed" };
+  pushLog(state, `🔁 ${state.players[fromIdx].name}이(가) ${state.players[toIdx].name}에게 거래를 제안했습니다. (${describeRes(offer)})`);
+}
+function counterTrade(state, giveBack){
+  if(!state.pendingTrade) return;
+  state.pendingTrade.counter = giveBack;
+  state.pendingTrade.status = "countered";
+  pushLog(state, `🔁 ${state.players[state.pendingTrade.toIdx].name}이(가) 거래 조건을 제시했습니다. (${describeRes(giveBack)})`);
+}
+function acceptTrade(state){
+  const t = state.pendingTrade;
+  if(!t || !t.counter) return "no_trade";
+  const from = state.players[t.fromIdx], to = state.players[t.toIdx];
+  for(const r of RES){ if((t.offer[r]||0) > from.resources[r]) return "from_insufficient"; }
+  for(const r of RES){ if((t.counter[r]||0) > to.resources[r]) return "to_insufficient"; }
+  RES.forEach(r=>{
+    from.resources[r] -= (t.offer[r]||0);
+    from.resources[r] += (t.counter[r]||0);
+    to.resources[r] -= (t.counter[r]||0);
+    to.resources[r] += (t.offer[r]||0);
+  });
+  pushLog(state, `✅ ${from.name} ↔ ${to.name} 거래 성사! (${describeRes(t.offer)} ↔ ${describeRes(t.counter)})`);
+  state.pendingTrade = null;
+  return "ok";
+}
+function declineTrade(state){
+  if(state.pendingTrade) pushLog(state, `❌ 거래가 거절되었습니다.`);
+  state.pendingTrade = null;
+}
+function describeRes(obj){
+  return RES.filter(r=>obj[r]>0).map(r=>`${RES_ICON[r]}${RES_LABEL[r]} ${obj[r]}개`).join(", ") || "없음";
+}
+
+/* =========================================================================
+   5. 전역 앱 상태 / Firebase 연동
+========================================================================= */
+let G = null;           // 현재 게임 state
+let myPlayerIdx = null; // 이 브라우저 탭이 조작 중인 플레이어 인덱스 (로컬모드는 null=자유조작)
+let myMode = null;      // 'local' | 'online'
+let myRoomCode = null;
+let unsub = null;
+
+function persist(){
+  G.updatedAt = Date.now();
+  if(myMode==="online" && fbReady && myRoomCode){
+    db.ref("catanRooms/"+myRoomCode).set(sanitize(G)).catch(e=>console.error("저장 실패:", e));
+  }
+  render();
+}
+function sanitize(obj){ return JSON.parse(JSON.stringify(obj, (k,v)=> v===undefined ? null : v)); }
+
+// Realtime Database는 빈 배열/객체나 null 값을 저장하지 않고 그 키 자체를 지워버립니다.
+// 그래서 다시 읽어올 때 roads:[] 였던 필드가 undefined로 돌아올 수 있는데,
+// 이후 코드에서 p.roads.push(...) 처럼 그대로 사용하면 그 시점에 오류가 납니다.
+// 상태를 받을 때마다 이렇게 사라질 수 있는 필드들을 안전한 기본값으로 채워줍니다.
+function normalizeState(g){
+  if(!g) return g;
+  g.log = g.log || [];
+  g.discardQueue = g.discardQueue || [];
+  g.discardNeed = g.discardNeed || {};
+  g.devDeck = g.devDeck || [];
+  g.dice1 = g.dice1 || 0;
+  g.dice2 = g.dice2 || 0;
+  (g.players||[]).forEach(p=>{
+    p.roads = p.roads || [];
+    p.settlements = p.settlements || [];
+    p.cities = p.cities || [];
+    p.devCards = p.devCards || [];
+    p.resources = p.resources || {wood:0,brick:0,wheat:0,sheep:0,ore:0};
+  });
+  return g;
+}
+
+// 브라우저(탭)별 고유 클라이언트 ID — 새로고침해도 유지되어 자동으로 내 자리를 다시 찾습니다.
+function getClientId(){
+  let id = localStorage.getItem("catan_client_id");
+  if(!id){
+    id = "c_"+Math.random().toString(36).slice(2,10)+Date.now().toString(36);
+    localStorage.setItem("catan_client_id", id);
+  }
+  return id;
+}
+
+function subscribeRoom(code){
+  if(unsub && unsub.ref) { unsub.ref.off("value", unsub.cb); }
+  const ref = db.ref("catanRooms/"+code);
+  const cb = snap=>{
+    const data = snap.val();
+    if(!data){ console.warn("[subscribeRoom] 빈 스냅샷 수신:", code); return; }
+    G = normalizeState(data);
+    const mine = G.players.findIndex(p=>p.claimedBy===getClientId());
+    myPlayerIdx = mine>=0 ? mine : null;
+    console.log("[subscribeRoom] 갱신 수신:", {
+      phase: G.phase,
+      players: G.players.map(p=>({name:p.name, claimedBy: p.claimedBy||null})),
+      myPlayerIdx
+    });
+    render();
+  };
+  ref.on("value", cb);
+  unsub = { ref, cb };
+}
+
+/* =========================================================================
+   6. 렌더링
+========================================================================= */
+function iconsFor(cost){
+  let out="";
+  RES.forEach(r=>{ for(let i=0;i<(cost[r]||0);i++) out+=RES_ICON[r]; });
+  return out;
+}
+function renderCostBar(){
+  const el = document.getElementById("costChips");
+  if(!el) return;
+  const chips = [
+    ["🛣️ 도로", BUILD_COST.road],
+    ["🏠 정착지 (1pt)", BUILD_COST.settlement],
+    ["🏛️ 도시 (2pt)", BUILD_COST.city],
+    ["🃏 발전카드 (랜덤)", BUILD_COST.dev],
+  ];
+  el.innerHTML = chips.map(([label,cost])=>
+    `<div class="costchip"><span class="cc-label">${label}</span><span class="cc-icons">${iconsFor(cost)}</span></div>`
+  ).join("");
+}
+
+function render(){
+  renderCostBar();
+  if(!G){ renderLobby(); return; }
+
+  if(G.phase==="lobby"){
+    document.getElementById("subtitle").textContent = "대기실 · 다른 사람이 방 코드로 참가하기를 기다리는 중";
+    document.getElementById("roomInfo").innerHTML = `방 코드: <b>${G.roomCode}</b>`;
+    document.getElementById("sideLeft").innerHTML="";
+    document.getElementById("sideRight").innerHTML="";
+    document.getElementById("actionBar").innerHTML="";
+    document.getElementById("logBox").innerHTML="";
+    document.getElementById("boardSvg").innerHTML="";
+    showModal(renderLobbyScreenHtml());
+    return;
+  }
+
+  document.getElementById("subtitle").textContent =
+    G.mode==="online" ? "최대 4인 · 방 코드로 서로 다른 기기에서 함께 플레이" : "한 기기에서 같이 플레이 (로컬 모드)";
+  document.getElementById("roomInfo").innerHTML = G.mode==="online" && G.roomCode
+    ? `방 코드: <b>${G.roomCode}</b> · 나: ${myPlayerIdx!==null ? G.players[myPlayerIdx].name : "관전 중"}`
+    : "";
+
+  renderBoard();
+  renderSide();
+  renderActionBar();
+  renderLog();
+  renderModals();
+}
+
+function renderLobby(){
+  renderCostBar();
+  document.getElementById("sideLeft").innerHTML="";
+  document.getElementById("sideRight").innerHTML="";
+  document.getElementById("actionBar").innerHTML="";
+  document.getElementById("logBox").innerHTML="";
+  document.getElementById("boardSvg").innerHTML="";
+  document.getElementById("roomInfo").innerHTML="";
+  showLobbyModal();
+}
+
+const TILE_TEXTURE_ICON = {wood:"🌳", brick:"🧱", wheat:"🌾", sheep:"🐑", ore:"⛰️", desert:"🌵"};
+const TILE_GRAD_STOPS = {
+  wood:["#6fc47e","#3a8a4c"], brick:["#f0a06a","#c96f3c"], wheat:["#f7e178","#e0b93a"],
+  sheep:["#c8f0a3","#93d66a"], ore:["#d4dae2","#a3aebb"], desert:["#f7ecc9","#e6d19c"]
+};
+function tileDefsHtml(){
+  let out = "<defs>";
+  Object.keys(TILE_GRAD_STOPS).forEach(r=>{
+    const [c1,c2] = TILE_GRAD_STOPS[r];
+    out += `<radialGradient id="grad-${r}" cx="35%" cy="30%" r="75%">
+      <stop offset="0%" stop-color="${c1}"/><stop offset="100%" stop-color="${c2}"/>
+    </radialGradient>`;
+  });
+  return out+"</defs>";
+}
+// 타일 하나당 대표 아이콘 1개만 하단에 크고 또렷하게 배치 (숫자 토큰·도둑 마커와 겹치지 않는 위치)
+function tileIconsHtml(t){
+  const icon = TILE_TEXTURE_ICON[t.resource] || "🌵";
+  return `<text x="${t.cx}" y="${t.cy+33}" font-size="24" text-anchor="middle" style="filter:drop-shadow(0 1px 1px rgba(0,0,0,.25));">${icon}</text>`;
+}
+
+function renderBoard(){
+  const svg = document.getElementById("boardSvg");
+  let html=tileDefsHtml();
+  const {tiles, vertices, edges} = G.board;
+
+  tiles.forEach((t, idx)=>{
+    const pts = t.vertexIds ? t.vertexIds.map(vid=>{
+      const v = vertices[vid]; return `${v.x},${v.y}`;
+    }).join(" ") : hexPoints(t.cx,t.cy);
+    html += `<polygon points="${pts}" fill="url(#grad-${t.resource})" stroke="#2d3f5c" stroke-width="2.5"
+      class="tile" data-tile="${idx}" onclick="onTileClick(${idx})" style="cursor:${G.subPhase==='awaitRobberMove' && isMyTurnOrLocal() ? 'pointer':'default'}"/>`;
+    html += tileIconsHtml(t);
+    if(t.number!=null){
+      const big = (t.number===6||t.number===8);
+      html += `<circle cx="${t.cx}" cy="${t.cy}" r="16" fill="#f2e6c4" stroke="#3a2f1d" stroke-width="1.5"/>`;
+      html += `<text x="${t.cx}" y="${t.cy+6}" text-anchor="middle" font-size="16" font-weight="800" fill="${big?'#c0392b':'#3a2f1d'}">${t.number}</text>`;
+    }
+    if(idx===G.robberTileIdx){
+      html += `<circle cx="${t.cx}" cy="${t.cy-34}" r="12" fill="#111" stroke="#fff" stroke-width="2"/>
+        <text x="${t.cx}" y="${t.cy-30}" text-anchor="middle" font-size="14">🥷</text>`;
+    }
+  });
+
+  // 항구
+  vertices.forEach(v=>{
+    if(!v.port) return;
+    const label = v.port.resource ? `${RES_ICON[v.port.resource]}${v.port.ratio}:1` : `${v.port.ratio}:1`;
+    const dir = Math.atan2(v.y, v.x);
+    const px = v.x + Math.cos(dir)*26, py = v.y + Math.sin(dir)*26;
+    html += `<line x1="${v.x}" y1="${v.y}" x2="${px}" y2="${py}" stroke="#ffd23f" stroke-dasharray="3,3"/>`;
+    html += `<text x="${px}" y="${py+4}" text-anchor="middle" font-size="10" fill="#ffd23f" font-weight="700">${label}</text>`;
+  });
+
+  // 변(도로)
+  edges.forEach(e=>{
+    const v1=vertices[e.v1], v2=vertices[e.v2];
+    let canRoad = false;
+    if(G.phase==="playing"){
+      canRoad = G.subPhase==="idle" && isMyTurnOrLocal() && actingPlayer()!==null && canBuildRoad(G, actingPlayer(), e.id) && G.hasRolledThisTurn;
+    } else if(G.phase==="setup"){
+      canRoad = G.setupState.awaiting==="road" && isMyTurnOrLocal() && canPlaceSetupRoad(G, e.id, G.setupState.lastVertex);
+    }
+    const color = e.road!=null ? G.players[e.road].color : (canRoad ? "#ffd23f" : "transparent");
+    const width = e.road!=null ? 6 : (canRoad?5:10);
+    html += `<line x1="${v1.x}" y1="${v1.y}" x2="${v2.x}" y2="${v2.y}" stroke="${color}" stroke-width="${width}" stroke-linecap="round"
+      onclick="onEdgeClick(${e.id})" style="cursor:${canRoad?'pointer':'default'}" opacity="${e.road!=null?1:(canRoad?0.85:0)}"/>`;
+    if(canRoad){
+      html += `<line x1="${v1.x}" y1="${v1.y}" x2="${v2.x}" y2="${v2.y}" stroke="transparent" stroke-width="14" onclick="onEdgeClick(${e.id})" style="cursor:pointer"/>`;
+    }
+  });
+
+  // 정점(마을/도시)
+  vertices.forEach(v=>{
+    let canSettle = false;
+    if(G.phase==="playing"){
+      canSettle = G.subPhase==="idle" && isMyTurnOrLocal() && actingPlayer()!==null && canBuildSettlement(G, actingPlayer(), v.id) && G.hasRolledThisTurn;
+    } else if(G.phase==="setup"){
+      canSettle = G.setupState.awaiting==="settlement" && isMyTurnOrLocal() && canPlaceSetupSettlement(G, v.id);
+    }
+    const canCityHere = G.phase==="playing" && pendingBuildMode==="city" && G.subPhase==="idle" && isMyTurnOrLocal()
+      && actingPlayer()!==null && v.building && v.building.type==="settlement" && v.building.playerIdx===actingPlayer();
+    if(v.building){
+      const col = G.players[v.building.playerIdx].color;
+      if(v.building.type==="city"){
+        html += `<rect x="${v.x-9}" y="${v.y-9}" width="18" height="18" fill="${col}" stroke="#fff" stroke-width="1.5" onclick="onVertexClick(${v.id})"/>`;
+      } else {
+        if(canCityHere){
+          html += `<circle cx="${v.x}" cy="${v.y}" r="15" fill="none" stroke="#ffd23f" stroke-width="3" opacity="0.9"><animate attributeName="r" values="12;16;12" dur="1.2s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.9;0.3;0.9" dur="1.2s" repeatCount="indefinite"/></circle>`;
+        }
+        html += `<circle cx="${v.x}" cy="${v.y}" r="9" fill="${col}" stroke="${canCityHere?'#ffd23f':'#fff'}" stroke-width="${canCityHere?'3':'1.5'}" onclick="onVertexClick(${v.id})" style="cursor:${canCityHere?'pointer':'default'}"/>`;
+      }
+    } else if(canSettle){
+      html += `<circle cx="${v.x}" cy="${v.y}" r="8" fill="#ffffff" stroke="#ffd23f" stroke-width="2" onclick="onVertexClick(${v.id})" style="cursor:pointer"/>`;
+    } else {
+      html += `<circle cx="${v.x}" cy="${v.y}" r="9" fill="transparent" onclick="onVertexClick(${v.id})"/>`;
+    }
+  });
+
+  svg.innerHTML = html;
+}
+function hexPoints(cx,cy){
+  let pts=[];
+  for(let i=0;i<6;i++){ const ang=Math.PI/180*(60*i-30); pts.push((cx+HEX_SIZE*Math.cos(ang))+","+(cy+HEX_SIZE*Math.sin(ang))); }
+  return pts.join(" ");
+}
+
+function renderSide(){
+  const left = document.getElementById("sideLeft");
+  const right = document.getElementById("sideRight");
+  left.innerHTML=""; right.innerHTML="";
+  G.players.forEach((p,i)=>{
+    const target = i%2===0 ? left : right;
+    const active = i===G.currentPlayerIndex;
+    const cardKnights = p.devCards.filter(c=>c.type==="knight").length;
+    const cardVp = p.devCards.filter(c=>c.type==="vp").length;
+    const div = document.createElement("div");
+    div.className = "player-card"+(active?" active":"");
+    div.innerHTML = `
+      <div class="head" style="background:${p.color}">
+        <span>👤 ${escapeHtml(p.name)}${myPlayerIdx===i?' (나)':''}</span>
+        <span class="pts">${p.points} 포인트</span>
+      </div>
+      <div class="body">
+        <div class="reslabel">자원합계 ${totalCards(p)}개</div>
+        <div class="resrow">
+          ${RES.map(r=>`<div class="rescell">${RES_ICON[r]}<span class="n">${(myPlayerIdx===i||G.mode==='local')?p.resources[r]:'?'}</span></div>`).join("")}
+        </div>
+        <div class="devinfo">소지한 발전카드<br>기사 ${(myPlayerIdx===i||G.mode==='local')?cardKnights:'?'}장 · 승점 ${(myPlayerIdx===i||G.mode==='local')?cardVp:'?'}장</div>
+        <div class="statrow">
+          <div class="statchip">교역로<b>${p._roadLen||0}</b></div>
+          <div class="statchip">기사<b>${p.knightsPlayed}</b></div>
+        </div>
+      </div>`;
+    target.appendChild(div);
+  });
+}
+
+function renderActionBar(){
+  const bar = document.getElementById("actionBar");
+  if(G.phase==="setup"){
+    const spIdx = currentSetupPlayerIdx(G);
+    const sp = G.players[spIdx];
+    const roundLabel = G.setupState.pointer < G.players.length ? "1번째" : "2번째";
+    const actionLabel = G.setupState.awaiting==="settlement" ? "정착지를 놓을 위치를 클릭하세요" : "연결할 도로를 클릭하세요";
+    bar.innerHTML = `<div class="turnpill" style="background:${sp.color}">${escapeHtml(sp.name)}의 초기 배치 (${roundLabel})</div>
+      <div class="spacer"></div>
+      <span style="color:#f5c96a;font-weight:700;">🏠 ${actionLabel}</span>`;
+    return;
+  }
+  if(G.phase==="ended"){
+    bar.innerHTML = `<div class="turnpill" style="background:#c79c34">🏆 ${escapeHtml(G.players[G.winner].name)} 승리!</div>
+      <div class="spacer"></div><button class="btn gold" onclick="confirmNewGame()">새 게임 시작</button>`;
+    return;
+  }
+  const cur = G.players[G.currentPlayerIndex];
+  const myTurn = isMyTurnOrLocal();
+  const canAct = myTurn && G.subPhase==="idle";
+  const p = actingPlayer()!==null ? G.players[actingPlayer()] : null;
+
+  let html = `<div class="turnpill" style="background:${cur.color}">${escapeHtml(cur.name)}의 차례</div>`;
+  html += `<div class="dice-box">${G.dice1?`<div class="die">${G.dice1}</div><div class="die">${G.dice2}</div><span>합계 ${G.dice1+G.dice2}</span>`:''}</div>`;
+  html += `<div class="spacer"></div>`;
+
+  if(G.subPhase==="awaitDiscard"){
+    html += `<span style="color:#f5c96a;font-weight:700;">☠️ 카드 버리기 대기중... (${G.discardQueue.length}명 남음)</span>`;
+  } else if(G.subPhase==="awaitRobberMove"){
+    html += `<span style="color:#f5c96a;font-weight:700;">🕵️ 보드에서 도둑을 이동할 타일을 클릭하세요</span>`;
+  } else if(G.subPhase==="awaitSteal"){
+    html += `<span style="color:#f5c96a;font-weight:700;">🖐️ 훔칠 대상을 선택하세요</span>`;
+  } else {
+    if(pendingBuildMode){
+      const modeLabel = {road:"🛣️ 도로 건설 모드", settlement:"🏠 마을 건설 모드", city:"🏛️ 도시 업그레이드 모드"}[pendingBuildMode];
+      html += `<span style="color:#ffd23f;font-weight:800;background:rgba(255,210,63,.14);padding:6px 12px;border-radius:20px;border:1.5px solid #ffd23f;">${modeLabel} — 강조된 곳을 클릭하세요</span>`;
+      html += `<button class="btn small" onclick="cancelBuildMode()">취소</button>`;
+    }
+    html += `<button class="btn blue" ${(!myTurn||G.hasRolledThisTurn)?'disabled':''} onclick="actRollDice()">🎲 주사위 굴리기</button>`;
+    html += `<button class="btn" ${!canAct||!G.hasRolledThisTurn?'disabled':''} onclick="openBuildMenu('road')">🛣️ 도로</button>`;
+    html += `<button class="btn" ${!canAct||!G.hasRolledThisTurn?'disabled':''} onclick="openBuildMenu('settlement')">🏠 마을</button>`;
+    html += `<button class="btn" ${!canAct||!G.hasRolledThisTurn?'disabled':''} onclick="openBuildMenu('city')">🏛️ 도시</button>`;
+    html += `<button class="btn" ${!canAct||!G.hasRolledThisTurn?'disabled':''} onclick="actBuyDev()">🃏 발전카드 구매</button>`;
+    html += `<button class="btn" ${!canAct?'disabled':''} onclick="openKnightMenu()">⚔️ 기사 사용</button>`;
+    html += `<button class="btn blue" ${!canAct||!G.hasRolledThisTurn?'disabled':''} onclick="openBankTrade()">🏦 은행 교역</button>`;
+    html += `<button class="btn blue" ${!canAct||!G.hasRolledThisTurn?'disabled':''} onclick="openPlayerTrade()">🔁 플레이어 거래</button>`;
+    html += `<button class="btn green" ${!canAct||!G.hasRolledThisTurn?'disabled':''} onclick="actEndTurn()">✅ 턴 종료</button>`;
+  }
+  bar.innerHTML = html;
+}
+
+function renderLog(){
+  const box = document.getElementById("logBox");
+  box.innerHTML = G.log.slice().reverse().map(l=>`<div>${escapeHtml(l)}</div>`).join("");
+}
+
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function isMyTurnOrLocal(){
+  if(G.mode==="local") return true;
+  const turnIdx = G.phase==="setup" ? currentSetupPlayerIdx(G) : G.currentPlayerIndex;
+  return myPlayerIdx===turnIdx;
+}
+function actingPlayer(){
+  if(G.mode==="local") return G.phase==="setup" ? currentSetupPlayerIdx(G) : G.currentPlayerIndex;
+  return myPlayerIdx;
+}
+
+/* =========================================================================
+   7. 유저 액션 핸들러
+========================================================================= */
+function actRollDice(){
+  if(!isMyTurnOrLocal() || G.hasRolledThisTurn) return;
+  rollDice(G);
+  persist();
+}
+function actBuyDev(){
+  const pi = actingPlayer(); if(pi===null) return;
+  if(!buyDevCard(G, pi)) alert("자원이 부족하거나 발전카드가 모두 소진되었습니다.");
+  persist();
+}
+function actEndTurn(){
+  const pi = actingPlayer(); if(pi===null || pi!==G.currentPlayerIndex) return;
+  endTurn(G);
+  persist();
+}
+
+let pendingBuildMode = null;
+function openBuildMenu(mode){
+  const pi = actingPlayer();
+  if(pi===null){ return; }
+
+  if(mode==="road"){
+    const hasSpot = G.board.edges.some(e=>canBuildRoad(G, pi, e.id));
+    if(!hasSpot){ alert("도로를 놓을 수 있는 위치가 없습니다. 내 도로나 건물과 연결된 빈 변이 있어야 합니다."); return; }
+  } else if(mode==="settlement"){
+    const hasSpot = G.board.vertices.some(v=>canBuildSettlement(G, pi, v.id));
+    if(!hasSpot){ alert("마을을 지을 수 있는 위치가 없습니다. 다른 건물과 2칸 이상 떨어져 있으면서, 내 도로와 연결된 자리여야 합니다. 먼저 도로를 뻗어보세요."); return; }
+  } else if(mode==="city"){
+    const hasSpot = G.players[pi].settlements.length>0;
+    if(!hasSpot){ alert("업그레이드할 마을이 없습니다. 먼저 마을을 지어야 도시로 업그레이드할 수 있습니다."); return; }
+  }
+
+  pendingBuildMode = mode;
+  const label = {road:"도로를 건설할 위치(보드의 강조된 선)를 클릭하세요.", settlement:"마을을 건설할 위치(보드의 강조된 점)를 클릭하세요.", city:"업그레이드할 내 마을(금색 테두리로 깜빡이는 곳)을 클릭하세요."}[mode];
+  toast(label);
+  render();
+}
+function cancelBuildMode(){
+  pendingBuildMode = null;
+  render();
+}
+function onEdgeClick(edgeId){
+  const pi = actingPlayer(); if(pi===null) return;
+  if(G.phase==="setup"){
+    if(G.setupState.awaiting==="road" && isMyTurnOrLocal()){
+      if(!placeSetupRoad(G, pi, edgeId)) alert("정착지와 연결된 위치에만 도로를 놓을 수 있습니다.");
+      persist();
+    }
+    return;
+  }
+  if(pendingBuildMode==="road"){
+    if(!buildRoad(G, pi, edgeId)) alert("이 위치에는 도로를 건설할 수 없습니다.");
+    pendingBuildMode=null;
+    persist();
+  }
+}
+function onVertexClick(vid){
+  const pi = actingPlayer(); if(pi===null) return;
+  if(G.phase==="setup"){
+    if(G.setupState.awaiting==="settlement" && isMyTurnOrLocal()){
+      if(!placeSetupSettlement(G, pi, vid)) alert("이 위치에는 정착지를 놓을 수 없습니다. (다른 정착지와 거리가 너무 가깝습니다)");
+      persist();
+    }
+    return;
+  }
+  if(pendingBuildMode==="settlement"){
+    if(!buildSettlement(G, pi, vid)) alert("이 위치에는 마을을 건설할 수 없습니다. (거리 규칙 또는 도로 연결 확인)");
+    pendingBuildMode=null;
+    persist();
+  } else if(pendingBuildMode==="city"){
+    if(!buildCity(G, pi, vid)) alert("이 위치를 도시로 업그레이드할 수 없습니다.");
+    pendingBuildMode=null;
+    persist();
+  }
+}
+function onTileClick(tileIdx){
+  if(G.subPhase==="awaitRobberMove" && isMyTurnOrLocal()){
+    moveRobber(G, tileIdx);
+    persist();
+  }
+}
+function chooseStealTarget(victimIdx){
+  moveRobberSteal(victimIdx);
+}
+function moveRobberSteal(victimIdx){
+  const cur = G.currentPlayerIndex;
+  stealResourceFromPlayer(G, victimIdx, cur);
+  G.subPhase="idle";
+  G.pendingSteal=null;
+  closeModal();
+  persist();
+}
+
+function openKnightMenu(){
+  const pi = actingPlayer(); if(pi===null) return;
+  const p = G.players[pi];
+  const avail = p.devCards.filter(c=>c.type==="knight" && !c.played && c.boughtTurn!==G.turnNumber);
+  if(avail.length===0){ alert("사용 가능한 기사 카드가 없습니다. (이번 턴에 산 카드는 사용 불가)"); return; }
+  playKnight(G, pi, avail[0].id);
+  persist();
+}
+
+/* ---- 은행 교역 모달 ---- */
+let bankGiveSel = null;
+function openBankTrade(){
+  bankGiveSel = null;
+  showModal(renderBankTradeModal());
+}
+function renderBankTradeModal(){
+  const pi = actingPlayer(); const p = G.players[pi];
+  return `<div class="modal">
+    <h2>🏦 교역 (은행 / 항구)</h2>
+    <p class="small-note">보유한 항구에 따라 자동으로 더 좋은 비율이 적용됩니다.</p>
+    <p>줄 자원 선택</p>
+    <div class="optrow">
+      ${RES.map(r=>{
+        const ratio = bestRatioFor(G, pi, r);
+        const disabled = p.resources[r] < ratio;
+        return `<div class="opt ${bankGiveSel===r?'sel':''}" style="${disabled?'opacity:.4;cursor:not-allowed;':''}" onclick="${disabled?'':'selectBankGive(\''+r+'\')'}">${RES_ICON[r]} ${RES_LABEL[r]} (${p.resources[r]}) · ${ratio}:1</div>`;
+      }).join("")}
+    </div>
+    ${bankGiveSel ? `<p>받을 자원 선택</p><div class="optrow">${RES.filter(r=>r!==bankGiveSel).map(r=>`<div class="opt" onclick="doBankTrade('${r}')">${RES_ICON[r]} ${RES_LABEL[r]}</div>`).join("")}</div>` : ""}
+    <div class="optrow"><button class="btn gold" onclick="closeModal()">닫기</button></div>
+  </div>`;
+}
+function selectBankGive(r){ bankGiveSel=r; showModal(renderBankTradeModal()); }
+function doBankTrade(getRes){
+  const pi = actingPlayer();
+  if(!bankTrade(G, pi, bankGiveSel, getRes)) alert("자원이 부족합니다.");
+  bankGiveSel=null;
+  closeModal();
+  persist();
+}
+
+/* ---- 플레이어간 거래 모달 ---- */
+let tradeOffer = {wood:0,brick:0,wheat:0,sheep:0,ore:0};
+let tradeTarget = null;
+function openPlayerTrade(){
+  tradeOffer = {wood:0,brick:0,wheat:0,sheep:0,ore:0};
+  tradeTarget = null;
+  showModal(renderPlayerTradeModal());
+}
+function renderPlayerTradeModal(){
+  const pi = actingPlayer(); const p = G.players[pi];
+  const others = G.players.filter(x=>x.idx!==pi);
+  return `<div class="modal">
+    <h2>🔁 플레이어에게 거래 제안</h2>
+    <p>내가 줄 자원</p>
+    ${RES.map(r=>`<div class="stepline"><span>${RES_ICON[r]} ${RES_LABEL[r]} (보유 ${p.resources[r]})</span>
+      <span><button class="stepbtn" onclick="stepTradeOffer('${r}',-1)">−</button>
+      <b style="margin:0 10px;">${tradeOffer[r]}</b>
+      <button class="stepbtn" onclick="stepTradeOffer('${r}',1)">+</button></span></div>`).join("")}
+    <p>대상 플레이어</p>
+    <div class="optrow">${others.map(o=>`<div class="opt ${tradeTarget===o.idx?'sel':''}" onclick="selectTradeTarget(${o.idx})">${escapeHtml(o.name)}</div>`).join("")}</div>
+    <div class="optrow">
+      <button class="btn blue" onclick="doProposeTrade()">📤 제안 보내기</button>
+      <button class="btn" onclick="closeModal()">취소</button>
+    </div>
+  </div>`;
+}
+function stepTradeOffer(r, delta){
+  const pi = actingPlayer(); const p = G.players[pi];
+  const v = tradeOffer[r]+delta;
+  if(v<0 || v>p.resources[r]) return;
+  tradeOffer[r]=v;
+  showModal(renderPlayerTradeModal());
+}
+function selectTradeTarget(idx){ tradeTarget=idx; showModal(renderPlayerTradeModal()); }
+function doProposeTrade(){
+  const pi = actingPlayer();
+  if(tradeTarget===null){ alert("거래 대상을 선택하세요."); return; }
+  if(RES.every(r=>tradeOffer[r]===0)){ alert("줄 자원을 1개 이상 선택하세요."); return; }
+  proposeTrade(G, pi, tradeTarget, {...tradeOffer});
+  closeModal();
+  persist();
+}
+
+let counterSel = {wood:0,brick:0,wheat:0,sheep:0,ore:0};
+function renderTradeResponseModal(){
+  const t = G.pendingTrade;
+  const to = G.players[t.toIdx];
+  return `<div class="modal">
+    <h2>🔁 거래 응답</h2>
+    <p><b>${escapeHtml(G.players[t.fromIdx].name)}</b>이(가) 제안한 자원: ${describeRes(t.offer)}</p>
+    <p>대신 내가 줄 자원의 수량을 선택해 답하세요.</p>
+    ${RES.map(r=>`<div class="stepline"><span>${RES_ICON[r]} ${RES_LABEL[r]} (보유 ${to.resources[r]})</span>
+      <span><button class="stepbtn" onclick="stepCounter('${r}',-1)">−</button>
+      <b style="margin:0 10px;">${counterSel[r]}</b>
+      <button class="stepbtn" onclick="stepCounter('${r}',1)">+</button></span></div>`).join("")}
+    <div class="optrow">
+      <button class="btn blue" onclick="doCounter()">📤 제안 보내기</button>
+      <button class="btn red" onclick="doDeclineTrade()">❌ 거절</button>
+    </div>
+  </div>`;
+}
+function stepCounter(r,delta){
+  const to = G.players[G.pendingTrade.toIdx];
+  const v = counterSel[r]+delta;
+  if(v<0||v>to.resources[r]) return;
+  counterSel[r]=v;
+  showModal(renderTradeResponseModal());
+}
+function doCounter(){
+  counterTrade(G, {...counterSel});
+  counterSel = {wood:0,brick:0,wheat:0,sheep:0,ore:0};
+  closeModal();
+  persist();
+}
+function doDeclineTrade(){
+  declineTrade(G);
+  counterSel = {wood:0,brick:0,wheat:0,sheep:0,ore:0};
+  closeModal();
+  persist();
+}
+function doAcceptFinalTrade(){
+  const result = acceptTrade(G);
+  if(result!=="ok"){
+    G.pendingTrade = null;
+    pushLog(G, `⚠️ 자원이 부족해 거래가 취소되었습니다.`);
+    closeModal();
+    persist();
+    alert("자원이 부족해 거래를 진행할 수 없습니다. (거래가 취소되었습니다)");
+    return;
+  }
+  closeModal();
+  persist();
+}
+function doRejectFinalTrade(){
+  declineTrade(G);
+  closeModal();
+  persist();
+}
+
+/* ---- 카드 버리기 모달 ---- */
+let discardSel = {wood:0,brick:0,wheat:0,sheep:0,ore:0};
+function renderDiscardModal(forPlayerIdx){
+  const p = G.players[forPlayerIdx];
+  const need = G.discardNeed[forPlayerIdx];
+  const sum = RES.reduce((s,r)=>s+discardSel[r],0);
+  return `<div class="modal">
+    <h2>🗑️ 카드 버리기 (${escapeHtml(p.name)})</h2>
+    <p>보유 카드가 8장 이상이라 <b>${need}장</b>을 버려야 합니다. (현재 선택: ${sum}/${need})</p>
+    ${RES.map(r=>`<div class="stepline"><span>${RES_ICON[r]} ${RES_LABEL[r]} (보유 ${p.resources[r]})</span>
+      <span><button class="stepbtn" onclick="stepDiscard('${r}',-1,${forPlayerIdx})">−</button>
+      <b style="margin:0 10px;">${discardSel[r]}</b>
+      <button class="stepbtn" onclick="stepDiscard('${r}',1,${forPlayerIdx})">+</button></span></div>`).join("")}
+    <div class="optrow"><button class="btn red" ${sum!==need?'disabled':''} onclick="submitDiscard(${forPlayerIdx})">버리기 확정</button></div>
+  </div>`;
+}
+function stepDiscard(r,delta,forPlayerIdx){
+  const p = G.players[forPlayerIdx];
+  const v = discardSel[r]+delta;
+  if(v<0||v>p.resources[r]) return;
+  discardSel[r]=v;
+  showModal(renderDiscardModal(forPlayerIdx));
+}
+function submitDiscard(forPlayerIdx){
+  if(!doDiscard(G, forPlayerIdx, {...discardSel})){ alert("선택한 수량이 정확하지 않습니다."); return; }
+  discardSel = {wood:0,brick:0,wheat:0,sheep:0,ore:0};
+  closeModal();
+  persist();
+}
+
+/* =========================================================================
+   8. 모달 컨테이너 / 로비 / 규칙
+========================================================================= */
+function showModal(html){ document.getElementById("modalRoot").innerHTML = `<div class="overlay" id="ov">${html}</div>`; }
+function closeModal(){ document.getElementById("modalRoot").innerHTML = ""; }
+
+function renderModals(){
+  // 자동으로 떠야 하는 모달들 (버리기 / 훔치기 / 거래응답) 을 최우선으로 처리
+  if(G.phase!=="playing"){ if(document.getElementById("ov")) closeModal(); return; }
+
+  if(G.subPhase==="awaitDiscard" && G.discardQueue.length>0){
+    const target = G.discardQueue[0];
+    if(G.mode==="local" || myPlayerIdx===target){
+      discardSel = {wood:0,brick:0,wheat:0,sheep:0,ore:0};
+      showModal(renderDiscardModal(target));
+      return;
+    } else {
+      showModal(`<div class="modal"><h2>☠️ 다른 플레이어 대기중</h2><p>${escapeHtml(G.players[target].name)}님이 카드를 버리는 중입니다...</p></div>`);
+      return;
+    }
+  }
+  if(G.subPhase==="awaitSteal" && G.pendingSteal){
+    if(G.mode==="local" || myPlayerIdx===G.currentPlayerIndex){
+      showModal(`<div class="modal"><h2>🖐️ 훔칠 대상 선택</h2><div class="optrow">
+        ${G.pendingSteal.victims.map(vIdx=>`<div class="opt" onclick="chooseStealTarget(${vIdx})">${escapeHtml(G.players[vIdx].name)} (카드 ${totalCards(G.players[vIdx])}장)</div>`).join("")}
+      </div></div>`);
+      return;
+    } else {
+      showModal(`<div class="modal"><h2>🖐️ 대기중</h2><p>도둑이 자원을 훔치는 중입니다...</p></div>`);
+      return;
+    }
+  }
+  if(G.pendingTrade){
+    const t = G.pendingTrade;
+    if(t.status==="proposed"){
+      if(G.mode==="local" || myPlayerIdx===t.toIdx){ showModal(renderTradeResponseModal()); return; }
+      if(myPlayerIdx===t.fromIdx || G.mode==="local"){ showModal(`<div class="modal"><h2>🔁 거래 제안 대기중</h2><p>상대의 응답을 기다리는 중입니다...</p></div>`); return; }
+    } else if(t.status==="countered"){
+      if(G.mode==="local" || myPlayerIdx===t.fromIdx){
+        showModal(`<div class="modal"><h2>🔁 상대의 역제안</h2>
+          <p>내가 제안: ${describeRes(t.offer)}</p>
+          <p>상대가 줄 자원: ${describeRes(t.counter)}</p>
+          <div class="optrow">
+            <button class="btn green" onclick="doAcceptFinalTrade()">✅ 수락</button>
+            <button class="btn red" onclick="doRejectFinalTrade()">❌ 거절</button>
+          </div></div>`);
+        return;
+      } else {
+        showModal(`<div class="modal"><h2>🔁 응답 대기중</h2><p>상대가 역제안을 검토중입니다...</p></div>`);
+        return;
+      }
+    }
+  }
+  if(document.getElementById("ov") && !pendingBuildMode) {
+    const cur = document.getElementById("ov").innerHTML;
+    if(cur.includes("대기중")) closeModal();
+  }
+}
+
+function openRules(){ showModal(rulesHtml()); }
+function rulesHtml(){
+  return `<div class="modal rulesbox">
+    <button class="close-x" onclick="closeModal()">✕</button>
+    <h2>📜 카탄 보드게임 규칙 요약</h2>
+    <h3>1. 승리 조건</h3>
+    <p>가장 먼저 <b>10점</b>을 달성하면 즉시 승리합니다.</p>
+    <ul>
+      <li>마을 1개 = 1점, 도시 1개 = 2점</li>
+      <li>최장교역로 (도로 5개 이상 연결) = 2점</li>
+      <li>최강기사단 (기사 카드 3장 이상 사용) = 2점</li>
+      <li>발전카드 중 승점 카드 = 카드마다 1점</li>
+    </ul>
+    <h3>2. 내 차례에 하는 일</h3>
+    <ul>
+      <li>① 주사위 굴리기 → 나온 숫자와 인접한 마을·도시가 자원을 받습니다.</li>
+      <li>② 다른 플레이어와 자유롭게 교역 (은행과는 4:1, 항구를 보유하면 3:1 또는 2:1)</li>
+      <li>③ 도로 / 마을 / 도시 업그레이드 / 발전카드 구매</li>
+    </ul>
+    <h3>3. 건설 비용</h3>
+    <div class="chips">
+      <div class="chip">🛣️ 도로: 나무1+벽돌1</div>
+      <div class="chip">🏠 마을(1pt): 나무1+벽돌1+밀1+양1</div>
+      <div class="chip">🏛️ 도시(2pt): 밀2+철3</div>
+      <div class="chip">🃏 발전카드: 밀1+양1+철1</div>
+    </div>
+    <h3>4. 도둑 (주사위 7)</h3>
+    <ul>
+      <li>카드 8장 이상 보유자는 정확히 절반(내림)을 버립니다</li>
+      <li>주사위를 던진 사람이 도둑을 원하는 타일로 옮깁니다</li>
+      <li><b>도둑이 도착한 타일에 건물이 있는 상대 중 한 명을 골라, 그 사람이 실제로 들고 있는 카드 중에서
+        무작위로 정확히 1장을 가져옵니다.</b> (카드를 안 들고 있으면 대상에서 제외됩니다)</li>
+      <li><b>🏠 하우스룰:</b> 이후 그 타일 숫자가 다시 나오면, 원래는 아무도 자원을 못 받는 것이 정식 룰이지만
+        이 방에서는 <b>도둑을 마지막으로 옮긴 사람</b>이 그 타일에서 나올 자원을 전부 대신 받습니다.</li>
+    </ul>
+    <h3>5. 종료 조건</h3>
+    <p>자기 차례에 10점을 달성하는 즉시 게임이 종료됩니다.</p>
+    <div class="optrow"><button class="btn gold" onclick="closeModal()">확인</button></div>
+  </div>`;
+}
+
+/* =========================================================================
+   9. 로비: 온라인 방 생성/참가(진짜 대기실), 로컬 플레이
+========================================================================= */
+function showLobbyModal(){
+  showModal(`<div class="modal">
+    <h2>🏝️ 카탄 온라인</h2>
+    <p>같은 기기에서 함께 앉아 플레이하거나, 방을 만들어 각자 다른 기기에서 온라인으로 플레이할 수 있습니다.</p>
+    <div class="optrow">
+      <button class="btn blue" onclick="showCreateRoomForm()">🌐 온라인 방 만들기</button>
+      <button class="btn gold" onclick="showJoinRoomForm()">🔑 방 코드로 참가하기</button>
+    </div>
+    <hr style="margin:14px 0;border-color:var(--line);">
+    <div class="optrow"><button class="btn" onclick="showLocalSetupForm()">🪑 한 기기에서 같이 플레이 (로컬)</button></div>
+    ${!fbReady ? `<div style="margin-top:14px;padding:12px;background:#3a2a10;border:1px solid #7a5a1e;border-radius:8px;">
+      <p style="margin:0 0 6px;font-weight:800;color:#7a2020;">⚠️ 온라인 모드를 사용할 수 없습니다</p>
+      <p class="small-note" style="margin:0 0 6px;">원인: ${escapeHtml(fbInitError || "알 수 없음")}</p>
+      <p class="small-note" style="margin:0;">체크리스트: ① Firebase 콘솔 > 빌드 > <b>Realtime Database</b>에서 데이터베이스를 만들었는지 (Firestore 말고 Realtime Database여야 함) ② firebaseConfig에 databaseURL 값이 있는지 ③ 보안 규칙이 테스트 모드(읽기/쓰기 허용)인지 ④ 이 파일을 file:// 로 직접 여는 대신 로컬 서버(예: <code>python3 -m http.server</code>)나 Firebase Hosting으로 열었는지 ⑤ 광고차단 확장 프로그램이 firebaseio.com/gstatic.com 요청을 막고 있지 않은지</p>
+    </div>`:""}
+  </div>`);
+}
+
+let setupCount = 4;
+let setupNames = ["플레이어1","플레이어2","플레이어3","플레이어4"];
+let lobbyCount = 4;
+let lobbyHostNick = "";
+let lobbyJoinNick = "";
+
+function showLocalSetupForm(){
+  showModal(setupFormHtml());
+}
+function setupFormHtml(){
+  return `<div class="modal">
+    <h2>🏝️ 로컬 플레이 설정</h2>
+    <p>플레이어 수를 고르고 이름을 입력한 뒤 게임을 시작하세요.</p>
+    <div class="optrow">
+      ${[2,3,4].map(n=>`<div class="opt ${setupCount===n?'sel':''}" onclick="setCount(${n})">${n}인 플레이</div>`).join("")}
+    </div>
+    ${Array.from({length:setupCount}).map((_,i)=>`<input class="field" value="${escapeHtml(setupNames[i])}" oninput="setupNames[${i}]=this.value">`).join("")}
+    <div class="optrow">
+      <button class="btn blue" onclick="startLocalGame()">🎲 게임 시작</button>
+      <button class="btn" onclick="showLobbyModal()">뒤로</button>
+    </div>
+  </div>`;
+}
+function setCount(n){ setupCount=n; showModal(setupFormHtml()); }
+function startLocalGame(){
+  const names = setupNames.slice(0,setupCount).map(n=>n && n.trim() ? n.trim() : "플레이어");
+  myMode="local"; myPlayerIdx=null; myRoomCode=null;
+  G = createInitialState(names, "local", null);
+  closeModal();
+  render();
+}
+
+/* ---- 온라인: 방 만들기 (인원수 + 내 닉네임만 입력 → 대기실 생성) ---- */
+function showCreateRoomForm(){
+  if(!fbReady){ alert("온라인 모드를 사용할 수 없습니다.\n원인: " + (fbInitError||"알 수 없음")); return; }
+  showModal(createRoomFormHtml());
+}
+function createRoomFormHtml(){
+  return `<div class="modal">
+    <h2>🌐 온라인 방 만들기</h2>
+    <p>총 인원 수를 정하고 본인 닉네임만 입력하세요. 방 코드가 만들어지면 그 코드를 다른 사람에게 공유해서,
+    각자 코드로 들어와 자기 닉네임과 자리를 스스로 선택합니다.</p>
+    <div class="optrow">
+      ${[2,3,4].map(n=>`<div class="opt ${lobbyCount===n?'sel':''}" onclick="setLobbyCount(${n})">${n}인용 방</div>`).join("")}
+    </div>
+    <input class="field" id="hostNickInput" value="${escapeHtml(lobbyHostNick)}" oninput="lobbyHostNick=this.value" placeholder="내 닉네임 입력" maxlength="10">
+    <div class="optrow">
+      <button class="btn blue" id="createRoomBtn" onclick="doCreateRoom()">🎲 방 만들기</button>
+      <button class="btn" onclick="showLobbyModal()">뒤로</button>
+    </div>
+  </div>`;
+}
+function setLobbyCount(n){ lobbyCount=n; showModal(createRoomFormHtml()); }
+function doCreateRoom(){
+  const btn = document.getElementById("createRoomBtn");
+  try{
+    const nick = (lobbyHostNick||"").trim();
+    if(!nick){ alert("닉네임을 입력하세요."); return; }
+    if(!db){ alert("Realtime Database 연결이 준비되지 않았습니다.\n원인: "+(fbInitError||"알 수 없음")); return; }
+
+    const code = genRoomCode();
+    const state = createLobbyState(lobbyCount, nick, code, getClientId());
+
+    if(btn){ btn.disabled = true; btn.textContent = "⏳ 생성 중..."; }
+    let settled = false;
+    const timeoutId = setTimeout(()=>{
+      if(settled) return;
+      settled = true;
+      if(btn){ btn.disabled = false; btn.textContent = "🎲 방 만들기"; }
+      alert("서버 응답이 없습니다 (8초 초과).\n가능한 원인: 인터넷 연결 문제, 광고차단/보안 확장 프로그램이 firebaseio.com 요청을 막고 있음, 또는 file:// 로 직접 열어서 발생하는 문제.\n확장 프로그램을 끄거나 로컬 서버(http://localhost)로 열어서 다시 시도해보세요.");
+    }, 8000);
+
+    db.ref("catanRooms/"+code).set(sanitize(state)).then(()=>{
+      if(settled) return; settled = true; clearTimeout(timeoutId);
+      myMode="online"; myRoomCode=code; myPlayerIdx=0;
+      localStorage.setItem("catan_myPlayer_"+code, 0);
+      subscribeRoom(code);
+      closeModal();
+    }).catch(e=>{
+      if(settled) return; settled = true; clearTimeout(timeoutId);
+      console.error("방 생성 실패:", e);
+      if(btn){ btn.disabled = false; btn.textContent = "🎲 방 만들기"; }
+      alert("방 생성 실패: "+(e.code?"["+e.code+"] ":"")+(e.message||e));
+    });
+  }catch(e){
+    console.error("doCreateRoom 예외:", e);
+    if(btn){ btn.disabled = false; btn.textContent = "🎲 방 만들기"; }
+    alert("방 생성 중 오류가 발생했습니다: "+(e.message||e));
+  }
+}
+function createLobbyState(playerCount, hostName, roomCode, hostClientId){
+  const players = Array.from({length:playerCount}, (_,i)=>({
+    idx:i, name: i===0?hostName:null, color:PLAYER_COLORS[i],
+    resources:{wood:0,brick:0,wheat:0,sheep:0,ore:0},
+    devCards:[], knightsPlayed:0, roads:[], settlements:[], cities:[], points:0,
+    claimedBy: i===0?hostClientId:null
+  }));
+  return {
+    mode:"online", roomCode, playerCount,
+    players, phase:"lobby",
+    log:["🏝️ 대기실이 생성되었습니다. 방 코드를 공유해서 친구를 초대하세요!"],
+    updatedAt: Date.now()
+  };
+}
+
+/* ---- 온라인: 방 코드로 참가 ---- */
+function showJoinRoomForm(){
+  if(!fbReady){ alert("온라인 모드를 사용할 수 없습니다.\n원인: " + (fbInitError||"알 수 없음")); return; }
+  showModal(`<div class="modal">
+    <h2>🔑 방 코드로 참가하기</h2>
+    <input class="field" id="joinCodeInput" placeholder="6자리 방 코드 입력" maxlength="6" style="text-transform:uppercase;">
+    <div class="optrow">
+      <button class="btn blue" onclick="doJoinRoom()">참가하기</button>
+      <button class="btn" onclick="showLobbyModal()">뒤로</button>
+    </div>
+  </div>`);
+}
+function doJoinRoom(){
+  const codeEl = document.getElementById("joinCodeInput");
+  const btnEl = codeEl ? codeEl.parentElement.querySelector(".btn.blue") : null;
+  try{
+    const code = codeEl.value.trim().toUpperCase();
+    if(!code){ alert("방 코드를 입력하세요."); return; }
+    if(!db){ alert("Realtime Database 연결이 준비되지 않았습니다.\n원인: "+(fbInitError||"알 수 없음")); return; }
+    if(btnEl){ btnEl.disabled=true; btnEl.textContent="⏳ 확인 중..."; }
+    let settled=false;
+    const timeoutId = setTimeout(()=>{
+      if(settled) return; settled=true;
+      if(btnEl){ btnEl.disabled=false; btnEl.textContent="참가하기"; }
+      alert("서버 응답이 없습니다 (8초 초과). 인터넷 연결이나 광고차단 확장 프로그램을 확인해보세요.");
+    }, 8000);
+    db.ref("catanRooms/"+code).once("value").then(snap=>{
+      if(settled) return; settled=true; clearTimeout(timeoutId);
+      if(!snap.exists()){ alert("존재하지 않는 방 코드입니다."); if(btnEl){btnEl.disabled=false; btnEl.textContent="참가하기";} return; }
+      myMode="online"; myRoomCode=code;
+      subscribeRoom(code);
+      closeModal();
+    }).catch(e=>{
+      if(settled) return; settled=true; clearTimeout(timeoutId);
+      console.error("참가 실패:", e);
+      if(btnEl){ btnEl.disabled=false; btnEl.textContent="참가하기"; }
+      alert("참가 실패: "+(e.code?"["+e.code+"] ":"")+(e.message||e));
+    });
+  }catch(e){
+    console.error("doJoinRoom 예외:", e);
+    if(btnEl){ btnEl.disabled=false; btnEl.textContent="참가하기"; }
+    alert("참가 중 오류가 발생했습니다: "+(e.message||e));
+  }
+}
+function genRoomCode(){
+  const chars="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let s=""; for(let i=0;i<6;i++) s+=chars[Math.floor(Math.random()*chars.length)];
+  return s;
+}
+
+/* ---- 대기실 화면: 자리 목록, 내 자리 선택, 호스트의 게임 시작 ---- */
+function renderLobbyScreenHtml(){
+  const myId = getClientId();
+  const myClaimedIdx = G.players.findIndex(p=>p.claimedBy===myId);
+  const isHost = G.players[0] && G.players[0].claimedBy===myId;
+  const activeCount = G.players.filter(p=>p.claimedBy).length;
+
+  const slotsHtml = G.players.map((p,i)=>{
+    if(p.claimedBy){
+      return `<div class="ppick" style="background:${p.color};">👤 ${escapeHtml(p.name)}${p.claimedBy===myId?' (나)':''}</div>`;
+    }
+    return `<div class="ppick taken">빈 자리 · 대기중</div>`;
+  }).join("");
+
+  let joinHtml = "";
+  if(myClaimedIdx===-1){
+    const emptySlots = G.players.map((p,i)=>({p,i})).filter(x=>!x.p.claimedBy);
+    joinHtml = `
+      <p>닉네임을 입력하고 참가할 자리를 선택하세요.</p>
+      <input class="field" id="joinNickInput" value="${escapeHtml(lobbyJoinNick)}" oninput="lobbyJoinNick=this.value" placeholder="닉네임 입력" maxlength="10">
+      <div class="optrow">
+        ${emptySlots.map(x=>`<button class="opt" onclick="claimLobbySlot(${x.i})">이 자리로 참가</button>`).join("")}
+      </div>`;
+  }
+
+  let startHtml = "";
+  if(isHost){
+    startHtml = `<div class="optrow">
+        <button class="btn gold" ${activeCount<2?'disabled':''} onclick="hostStartGame()">🎲 게임 시작 (${activeCount}/${G.playerCount}명 참가)</button>
+      </div>
+      ${activeCount<2?'<p class="small-note">최소 2명이 참가해야 시작할 수 있습니다. 자리가 다 안 차도 2명 이상이면 시작할 수 있어요.</p>':''}`;
+  } else {
+    startHtml = `<p class="small-note">호스트가 게임을 시작하기를 기다리는 중입니다... (${activeCount}/${G.playerCount}명 참가)</p>`;
+  }
+
+  return `<div class="modal">
+    <h2>🏝️ 대기실</h2>
+    <p>방 코드: <b style="font-size:22px;letter-spacing:4px;">${G.roomCode}</b> — 이 코드를 친구에게 알려주세요.</p>
+    <div class="playerpicker">${slotsHtml}</div>
+    ${joinHtml}
+    ${startHtml}
+    <div class="optrow"><button class="btn" onclick="leaveLobby()">나가기</button></div>
+  </div>`;
+}
+function claimLobbySlot(idx){
+  try{
+    const nick = (lobbyJoinNick||"").trim();
+    if(!nick){ alert("닉네임을 입력하세요."); return; }
+    if(!db){ alert("Realtime Database 연결이 준비되지 않았습니다.\n원인: "+(fbInitError||"알 수 없음")); return; }
+    if(!myRoomCode){ alert("방 코드가 없습니다. 다시 참가해주세요."); return; }
+
+    const playersRef = db.ref("catanRooms/"+myRoomCode+"/players");
+    console.log("[claimLobbySlot] 시도:", {roomCode: myRoomCode, idx, nick, clientId: getClientId()});
+
+    let settled=false;
+    const timeoutId = setTimeout(()=>{
+      if(settled) return; settled=true;
+      alert("서버 응답이 없습니다 (8초 초과). 인터넷 연결이나 광고차단 확장 프로그램을 확인해보세요.");
+    }, 8000);
+
+    // players 노드 전체를 원자적으로 읽고-수정합니다 (배열 하위 인덱스에 바로 트랜잭션을 거는 대신
+    // 부모인 players 노드 자체에 걸어서, RTDB가 배열/객체 중 무엇으로 돌려주든 안전하게 처리합니다).
+    playersRef.transaction(currentPlayers=>{
+      if(currentPlayers==null) return currentPlayers; // 방이 없으면 중단
+      const arr = Array.isArray(currentPlayers)
+        ? currentPlayers.slice()
+        : Object.keys(currentPlayers).sort((a,b)=>Number(a)-Number(b)).map(k=>currentPlayers[k]);
+      if(!arr[idx]) return; // 그런 자리가 없음 -> 중단
+      if(arr[idx].claimedBy) return; // 이미 다른 사람이 선점 -> 중단 (undefined 반환 = 트랜잭션 취소)
+      arr[idx] = Object.assign({}, arr[idx], { claimedBy: getClientId(), name: nick });
+      return arr;
+    }, (error, committed, snapshot)=>{
+      if(settled) return; settled=true; clearTimeout(timeoutId);
+      if(error){
+        console.error("[claimLobbySlot] 트랜잭션 오류:", error);
+        alert("참가 실패: "+error.message);
+        return;
+      }
+      if(!committed){
+        console.warn("[claimLobbySlot] 커밋되지 않음 (이미 선점되었거나 자리 없음)");
+        alert("이미 다른 사람이 선택한 자리입니다. 다른 자리를 선택해주세요.");
+        return;
+      }
+      console.log("[claimLobbySlot] 성공:", snapshot ? snapshot.val() : null);
+      myMode="online"; myPlayerIdx=idx;
+      localStorage.setItem("catan_myPlayer_"+myRoomCode, idx);
+      lobbyJoinNick = "";
+      // 실시간 리스너가 서버 데이터를 받아오기 전에도 즉시 화면에 반영되도록 로컬 상태도 낙관적으로 갱신.
+      // (곧이어 on('value')가 서버의 정본 데이터로 다시 한번 덮어써 확정합니다.)
+      if(G && G.players && G.players[idx]){
+        G.players[idx] = Object.assign({}, G.players[idx], { claimedBy: getClientId(), name: nick });
+      }
+      render();
+    });
+  }catch(e){
+    console.error("[claimLobbySlot] 예외:", e);
+    alert("참가 중 오류가 발생했습니다: "+(e.message||e));
+  }
+}
+function hostStartGame(){
+  if(!startGameFromLobby(G)){ alert("최소 2명이 참가해야 시작할 수 있습니다."); return; }
+  persist();
+}
+function leaveLobby(){
+  if(unsub && unsub.ref){ unsub.ref.off("value", unsub.cb); } unsub=null;
+  G=null; myMode=null; myPlayerIdx=null; myRoomCode=null;
+  showLobbyModal();
+}
+
+function confirmNewGame(){
+  if(!confirm("정말 새 게임을 시작할까요? 현재 진행 상황은 사라집니다.")) return;
+  if(unsub && unsub.ref){ unsub.ref.off("value", unsub.cb); } unsub=null;
+  G=null; myMode=null; myPlayerIdx=null; myRoomCode=null;
+  showLobbyModal();
+}
+
+function toast(msg){
+  const el = document.createElement("div");
+  el.textContent = msg;
+  el.style.cssText = "position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#2c3a52;color:#fff;padding:10px 18px;border-radius:10px;border:1px solid #3d4d68;z-index:200;font-size:13px;";
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(), 2200);
+}
+
+/* =========================================================================
+   10. 시작
+========================================================================= */
+function fbHealthCheck(){
+  if(!fbReady || !db) return Promise.resolve();
+  return db.ref("_healthcheck/ping").set({t: Date.now()})
+    .then(()=>{ fbInitError = null; })
+    .catch(e=>{
+      console.error("Realtime Database 연결 테스트 실패:", e);
+      fbReady = false;
+      fbInitError = (e && e.code ? "["+e.code+"] " : "") + ((e && e.message) ? e.message : String(e));
+    });
+}
+
+window.addEventListener("DOMContentLoaded", ()=>{
+  fbHealthCheck().finally(()=> renderLobby());
+});
+</script>
+</body>
+</html>
